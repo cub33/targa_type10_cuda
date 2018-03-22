@@ -58,7 +58,6 @@ void insertRawPkt(TGA* tga, raw_pkt rawPkt) {
   tga->packets[tga->size].rawPkt.values = (int*) malloc(sizeof(int) * rawPkt.repeats);
   for (int i = 0; i < rawPkt.repeats; i++)
     tga->packets[tga->size].rawPkt.values[i] = rawPkt.values[i];
-  raw_pkt _rawPkt = tga->packets[tga->size].rawPkt;
   tga->packets[tga->size++].id = 0;
 }
 
@@ -106,7 +105,9 @@ int main(int argc, char const *argv[]) {
         bool areRepeated = rlePkt.repeats > 0;
         if (areRepeated || (areRepeated && endLine)) {
           rlePkt.repeats++;
-          tga.packets[tga.size] = (Packet) rlePkt;
+          Packet temp;
+          temp.rlePkt = rlePkt;
+          tga.packets[tga.size] = temp;
           tga.packets[tga.size++].id = 1;
           rlePkt.value = -1;
           rlePkt.repeats = 0;
