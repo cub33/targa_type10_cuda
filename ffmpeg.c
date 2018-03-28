@@ -1,32 +1,64 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
+#include "ffmpeg.h"
+/*
+compile with command:
+gcc -w -o ffmpeg.o ffmpeg.c -lavformat -lavcodec -lswscale -lavutil
+*/
 
-void saveFrame(AVFrame *pFrame, int width, int height, int iFrame) {
+GeneralFrame *frame2exp; // frame to export
+
+GeneralFrame importFrame() {
+  printf("width: %d, height: %d\n", frame2exp->width, frame2exp->height);
+  int idx = 0;
+  int r, g, b;
+  for (int x = 0; x < frame2exp->width; x++)
+    for (int y = 0; y < frame2exp->height; y++) {
+      idx = y + x * frame2exp->height;
+      r = frame2exp->pixels[idx].r;
+      g = frame2exp->pixels[idx].g;
+      b = frame2exp->pixels[idx].b;
+      printf("r: %d, g: %d, b: %d\n", r, g, b);
+    }
+  return *frame2exp;
+};
+
+void saveFrame(AVFrame *pFrame, int width, int height) {
+  frame2exp = (GeneralFrame *) malloc(sizeof(GeneralFrame));
+  frame2exp->width = width;
+  frame2exp->height = height;
+  frame2exp->pixels = (RGBPixel *) malloc(sizeof(RGBPixel) * width * height);
+  int p, idx = 0;
+  RGBPixel *pixel = (RGBPixel *) malloc(sizeof(RGBPixel));
+  for (int x = 0; x < width; x++)
+    for (int y = 0; y < height; y++) {
+      p = x * 3 + y * pFrame->linesize[0];
+      idx = y + x * height;
+      pixel->r = pFrame->data[0][p];
+      pixel->g = pFrame->data[0][p+1];
+      pixel->b = pFrame->data[0][p+2];
+      frame2exp->pixels[idx] = *pixel;
+    }
+}
+
+void saveFrameToDisk(AVFrame *pFrame, int width, int height, int iFrame) {
   FILE *pFile;
   char szFilename[32];
-  int r, g, b;
 
   // Open file
   sprintf(szFilename, "frame%d.ppm", iFrame);
-  pFile=fopen(szFilename, "wb");
-  if(pFile==NULL)
+  pFile = fopen(szFilename, "wb");
+  if(pFile == NULL)
     exit(0);
 
   // Write header
   fprintf(pFile, "P6\n%d %d\n255\n", width, height);
-
   // Write pixel data
-  for (int x = 0; x < width; x++) {
-    for(int y = 0; y < height; y++) {
-      fwrite(pFrame->data[0]+y*pFrame->linesize[0], 1, width*3, pFile);
-      int p=x*3+y*pFrame->linesize[0];
-      r = pFrame->data[0][p];
-      g = pFrame->data[0][p+1];
-      b = pFrame->data[0][p+2];
-    }
-  }
-  // Close file
+  int p;
+  for(int y = 0; y < height; y++)
+    fwrite(pFrame->data[0] + y * pFrame->linesize[0], 1, width*3, pFile);
+
   fclose(pFile);
 }
 
@@ -51,6 +83,7 @@ int main(int argc, char const *argv[]) {
     printf("%s\n", "Could not find stream information.");
     exit(0);
   }
+
   // printing info
   printf("%s\n", "   --------------  File info  --------------\n");
   av_dump_format(pFormatCtx, 0, argv[1], 0);
@@ -120,6 +153,7 @@ int main(int argc, char const *argv[]) {
   );
 
   i = 0;
+  int once = 1;
   while(av_read_frame(pFormatCtx, &packet) >= 0) {
     // Is this a packet from the video stream?
     if(packet.stream_index==videoStream) {
@@ -134,8 +168,11 @@ int main(int argc, char const *argv[]) {
   		  pFrameRGB->data, pFrameRGB->linesize);
 
           // Save the frame to disk
-          if(++i<=5)
-            saveFrame(pFrameRGB, pCodecCtx->width, pCodecCtx->height, i);
+          if(once) {
+            once = 0;
+            saveFrame(pFrameRGB, pCodecCtx->width, pCodecCtx->height);
+            importFrame();
+          }
       }
     }
 
