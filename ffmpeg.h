@@ -10,3 +10,7 @@ typedef struct frame {
   int height;
   RGBPixel *pixels;
 } GeneralFrame;
+
+GeneralFrame* importFrame();
+
+void ffmpegMain(char const *videoPath);

@@ -7,28 +7,33 @@ compile with command:
 gcc -w -o ffmpeg.o ffmpeg.c -lavformat -lavcodec -lswscale -lavutil
 */
 
-GeneralFrame *frame2exp; // frame to export
+GeneralFrame *frameToExp; // frame to export
 
-GeneralFrame importFrame() {
-  printf("width: %d, height: %d\n", frame2exp->width, frame2exp->height);
+GeneralFrame* importFrame(char const *videoPath) {
+  ffmpegMain(videoPath);
+  return frameToExp;
+};
+
+void printFrame(GeneralFrame* frame) {
+  printf("width: %d, height: %d\n", frame->width, frame->height);
   int idx = 0;
   int r, g, b;
-  for (int x = 0; x < frame2exp->width; x++)
-    for (int y = 0; y < frame2exp->height; y++) {
-      idx = y + x * frame2exp->height;
-      r = frame2exp->pixels[idx].r;
-      g = frame2exp->pixels[idx].g;
-      b = frame2exp->pixels[idx].b;
-      printf("r: %d, g: %d, b: %d\n", r, g, b);
+  for (int x = 0; x < frame->width; x++)
+    for (int y = 0; y < frame->height; y++) {
+      idx = y + x * frame->height;
+      r = frame->pixels[idx].r;
+      //g = frame->pixels[idx].g;
+      //b = frame->pixels[idx].b;
+      //printf("r: %d, g: %d, b: %d\n", r, g, b);
+      printf("%d, ", r);
     }
-  return *frame2exp;
 };
 
 void saveFrame(AVFrame *pFrame, int width, int height) {
-  frame2exp = (GeneralFrame *) malloc(sizeof(GeneralFrame));
-  frame2exp->width = width;
-  frame2exp->height = height;
-  frame2exp->pixels = (RGBPixel *) malloc(sizeof(RGBPixel) * width * height);
+  frameToExp = (GeneralFrame *) malloc(sizeof(GeneralFrame));
+  frameToExp->width = width;
+  frameToExp->height = height;
+  frameToExp->pixels = (RGBPixel *) malloc(sizeof(RGBPixel) * width * height);
   int p, idx = 0;
   RGBPixel *pixel = (RGBPixel *) malloc(sizeof(RGBPixel));
   for (int x = 0; x < width; x++)
@@ -38,7 +43,7 @@ void saveFrame(AVFrame *pFrame, int width, int height) {
       pixel->r = pFrame->data[0][p];
       pixel->g = pFrame->data[0][p+1];
       pixel->b = pFrame->data[0][p+2];
-      frame2exp->pixels[idx] = *pixel;
+      frameToExp->pixels[idx] = *pixel;
     }
 }
 
@@ -62,7 +67,7 @@ void saveFrameToDisk(AVFrame *pFrame, int width, int height, int iFrame) {
   fclose(pFile);
 }
 
-int main(int argc, char const *argv[]) {
+void ffmpegMain(char const* videoPath) {
   AVFormatContext *pFormatCtx = NULL;
   AVCodecContext *pCodecCtx = NULL;
   int i = 0;
@@ -73,7 +78,7 @@ int main(int argc, char const *argv[]) {
   av_register_all();
 
   // open video file
-  if(avformat_open_input(&pFormatCtx, argv[1], NULL, NULL) != 0) {
+  if(avformat_open_input(&pFormatCtx, videoPath, NULL, NULL) != 0) {
     printf("%s\n", "Could not open the file.");
     exit(0);
   }
@@ -86,7 +91,7 @@ int main(int argc, char const *argv[]) {
 
   // printing info
   printf("%s\n", "   --------------  File info  --------------\n");
-  av_dump_format(pFormatCtx, 0, argv[1], 0);
+  av_dump_format(pFormatCtx, 0, videoPath, 0);
   printf("%s\n", "\n   --------------  End file info  --------------\n");
 
   // Find the first video stream
@@ -157,21 +162,20 @@ int main(int argc, char const *argv[]) {
   while(av_read_frame(pFormatCtx, &packet) >= 0) {
     // Is this a packet from the video stream?
     if(packet.stream_index==videoStream) {
-  	// Decode video frame
+    // Decode video frame
       avcodec_decode_video2(pCodecCtx, pFrame, &frameFinished, &packet);
 
       // Did we get a video frame?
       if(frameFinished) {
         // Convert the image from its native format to RGB
         sws_scale(sws_ctx, (uint8_t const * const *)pFrame->data,
-  		  pFrame->linesize, 0, pCodecCtx->height,
-  		  pFrameRGB->data, pFrameRGB->linesize);
+        pFrame->linesize, 0, pCodecCtx->height,
+        pFrameRGB->data, pFrameRGB->linesize);
 
           // Save the frame to disk
           if(once) {
             once = 0;
             saveFrame(pFrameRGB, pCodecCtx->width, pCodecCtx->height);
-            importFrame();
           }
       }
     }
@@ -193,5 +197,9 @@ int main(int argc, char const *argv[]) {
   // Close the video file
   avformat_close_input(&pFormatCtx);
 
-  return 0;
 }
+
+/*int main(int argc, char const *argv[]) {
+  ffmpegMain(argc, argv);
+  return 0;
+}*/

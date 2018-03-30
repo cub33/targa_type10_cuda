@@ -1,33 +1,14 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <stdbool.h>
+#include "tga.h"
+//#include "ffmpeg.h"
+
+/*
 #define WIDTH 5
 #define HEIGHT 6
 
-/* TODO: Pixel struct */
-
-typedef struct rle_pkt_struct {
-  bool id;
-  /* Pixel */int value;
-  int repeats;
-} rle_pkt;
-
-typedef struct raw_pkt_struct {
-  bool id;
-  /* Pixel* */ int* values;
-  int repeats;
-} raw_pkt;
-
-typedef union {
-  bool id;
-  rle_pkt rlePkt;
-  raw_pkt rawPkt;
-} Packet;
-
-typedef struct tga_struct {
-  Packet* packets;
-  int size;
-} TGA;
+TODO: change type of rgb variables in uint8_t
 
 int img[WIDTH][HEIGHT][3] = {
  {{1, 3, 4}, {8, 3, 4}, {1, 3, 4}, {2, 3, 4}, {3, 3, 4}, {9, 3, 4}} ,
@@ -36,6 +17,7 @@ int img[WIDTH][HEIGHT][3] = {
  {{5, 3, 4}, {5, 3, 4}, {2, 3, 4}, {5, 3, 4}, {5, 3, 4}, {2, 3, 4}} ,
  {{4, 3, 4}, {2, 3, 4}, {2, 3, 4}, {5, 3, 4}, {5, 3, 4}, {3, 3, 4}}
 };
+*/
 
 void printTGA(TGA tga) {
   for (int i = 0; i < tga.size; i++) {
@@ -61,29 +43,35 @@ void insertRawPkt(TGA* tga, raw_pkt rawPkt) {
   tga->packets[tga->size++].id = 0;
 }
 
-int main(int argc, char const *argv[]) {
+void tgaMain(GeneralFrame* frame) {
+
   rle_pkt rlePkt = { 1, -1, 0 };
   raw_pkt rawPkt;
-  rawPkt.values = (int*) malloc(sizeof(int)*WIDTH);
+  rawPkt.values = (int*) malloc(sizeof(int) * frame->width); /* FIXME */
   rawPkt.repeats = 0;
   TGA tga;
-  tga.packets = (Packet*) malloc(sizeof(Packet)*500); /* TODO allocate memory in correct way */
+  tga.packets = (Packet*) malloc(sizeof(Packet) * 50000000); /* TODO allocate memory in correct way */
   tga.size = 0;
   bool different = 1;
-  for (int y = 0; y < HEIGHT; y++) {
-    for (int x = 0; x < WIDTH; x++) {
-      int r = img[x][y][0];
+  int idx = 0;
+  for (int x = 0; x < frame->width; x++) {
+    for (int y = 0; y < frame->height; y++) {
+      //int r = img[x][y][0];
       //int g = img[x][y][1];
       //int b = img[x][y][2];
-      int value = r;
+      idx = y + x * frame->height;
+      int value = frame->pixels[idx].r;
       rlePkt.value = value;
-      bool endLine = img[x+1][y][0] == 0;
+      //bool endLine = img[x+1][y][0] == 0;
+      bool endLine = x == frame->height-1;
       int nextValue = -1;
       int prevValue = -1;
       if (x != 0)
-        prevValue = img[x-1][y][0];
+        //prevValue = img[x-1][y][0];
+        prevValue = frame->pixels[idx-1].r;
       if (!endLine)
-        nextValue = img[x+1][y][0];
+        //nextValue = img[x+1][y][0];
+        nextValue = frame->pixels[idx+1].r;
       else
         different = 1;
       if (value == nextValue) {
@@ -116,6 +104,11 @@ int main(int argc, char const *argv[]) {
     }
   }
   printTGA(tga);
+}
+
+/*
+int main(int argc, char const *argv[]) {
 
   return 0;
 }
+*/
