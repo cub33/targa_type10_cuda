@@ -2,22 +2,7 @@
 #include <malloc.h>
 #include <stdbool.h>
 #include "tga.h"
-//#include "ffmpeg.h"
-
-/*
-#define WIDTH 5
-#define HEIGHT 6
-
-TODO: change type of rgb variables in uint8_t
-
-int img[WIDTH][HEIGHT][3] = {
- {{1, 3, 4}, {8, 3, 4}, {1, 3, 4}, {2, 3, 4}, {3, 3, 4}, {9, 3, 4}} ,
- {{7, 3, 4}, {3, 3, 4}, {5, 3, 4}, {2, 3, 4}, {7, 3, 4}, {6, 3, 4}} ,
- {{5, 3, 4}, {4, 3, 4}, {2, 3, 4}, {5, 3, 4}, {4, 3, 4}, {1, 3, 4}} ,
- {{5, 3, 4}, {5, 3, 4}, {2, 3, 4}, {5, 3, 4}, {5, 3, 4}, {2, 3, 4}} ,
- {{4, 3, 4}, {2, 3, 4}, {2, 3, 4}, {5, 3, 4}, {5, 3, 4}, {3, 3, 4}}
-};
-*/
+#include "RGBPixel.c"
 
 void printTGA(TGA tga) {
   for (int i = 0; i < tga.size; i++) {
@@ -25,11 +10,12 @@ void printTGA(TGA tga) {
     if (pkt.id == 0) {
       raw_pkt rawPkt = pkt.rawPkt;
       for (int j = 0; j < rawPkt.repeats; j++)
-        printf("%d, ", rawPkt.values[j]);
+        printPixel(rawPkt.values[j]);
     }
     else {
       rle_pkt rlePkt = pkt.rlePkt;
-      printf("%d x %d, ", rlePkt.value, rlePkt.repeats);
+      printPixel(rlePkt.value);
+      printf("x %d, ", rlePkt.repeats);
     }
   }
   printf("\n");
@@ -37,41 +23,39 @@ void printTGA(TGA tga) {
 
 void insertRawPkt(TGA* tga, raw_pkt rawPkt) {
   tga->packets[tga->size].rawPkt.repeats = rawPkt.repeats;
-  tga->packets[tga->size].rawPkt.values = (int*) malloc(sizeof(int) * rawPkt.repeats);
+  tga->packets[tga->size].rawPkt.values = (RGBPixel *) malloc(sizeof(RGBPixel) * rawPkt.repeats);
   for (int i = 0; i < rawPkt.repeats; i++)
-    tga->packets[tga->size].rawPkt.values[i] = rawPkt.values[i];
+    copyPixels(&(tga->packets[tga->size].rawPkt.values[i]), &rawPkt.values[i]);
   tga->packets[tga->size++].id = 0;
 }
 
-void tgaMain(GeneralFrame* frame) {
+void createTGA(VideoFrame* frame) {
 
   rle_pkt rlePkt = { 1, -1, 0 };
   raw_pkt rawPkt;
-  rawPkt.values = (int*) malloc(sizeof(int) * frame->width); /* FIXME */
+  rawPkt.values = (uint8_t *) malloc(sizeof(int) * frame->width); /* FIXME */
   rawPkt.repeats = 0;
   TGA tga;
-  tga.packets = (Packet*) malloc(sizeof(Packet) * 50000000); /* TODO allocate memory in correct way */
+  tga.packets = (Packet *) malloc(sizeof(Packet) * frame->width * frame->height); /* TODO allocate memory in correct way */
   tga.size = 0;
   bool different = 1;
   int idx = 0;
   for (int x = 0; x < frame->width; x++) {
     for (int y = 0; y < frame->height; y++) {
-      //int r = img[x][y][0];
-      //int g = img[x][y][1];
-      //int b = img[x][y][2];
       idx = y + x * frame->height;
-      uint8_t value = frame->pixels[idx].r;
+      RGBPixel value, nextValue, prevValue;
+      copyPixels(&value, &frame->pixels[idx]);
+      assignRGBValues(&nextValue, -1, -1, -1);
+      assignRGBValues(&prevValue, -1, -1, -1);
       rlePkt.value = value;
       bool endLine = x == frame->height-1;
-      uint8_t nextValue = -1;
-      uint8_t prevValue = -1;
       if (x != 0)
-        prevValue = frame->pixels[idx-1].r;
+        copyPixels(&prevValue, &frame->pixels[idx-1]);
       if (!endLine)
-        nextValue = frame->pixels[idx+1].r;
+        copyPixels(&nextValue, &frame->pixels[idx+1]);
       else
         different = 1;
-      if (value == nextValue) {
+      if (valuesAreEqual(value, nextValue)) {
         rlePkt.repeats++;
         different = 0;
         if (rawPkt.repeats > 0) {
@@ -80,8 +64,10 @@ void tgaMain(GeneralFrame* frame) {
         }
       }
       else {
-        if (different && prevValue != value)
-          rawPkt.values[rawPkt.repeats++] = value;
+        if (different && !valuesAreEqual(prevValue, value)) {
+          copyPixels(&(rawPkt.values[rawPkt.repeats]), &value);
+          rawPkt.repeats++;
+        }
         if (rawPkt.repeats > 0 && endLine) {
           insertRawPkt(&tga, rawPkt);
           rawPkt.repeats = 0;
@@ -91,21 +77,15 @@ void tgaMain(GeneralFrame* frame) {
         if (areRepeated || (areRepeated && endLine)) {
           rlePkt.repeats++;
           Packet temp;
-          temp.rlePkt = rlePkt;
+          copyPixels(&temp.rlePkt.value, &rlePkt.value);
+          temp.rlePkt.repeats = rlePkt.repeats;
           tga.packets[tga.size] = temp;
           tga.packets[tga.size++].id = 1;
-          rlePkt.value = -1;
+          assignRGBValues(&rlePkt.value, -1, -1, -1);
           rlePkt.repeats = 0;
         }
       }
     }
   }
-  printTGA(tga);
+  //printTGA(tga);
 }
-
-/*
-int main(int argc, char const *argv[]) {
-
-  return 0;
-}
-*/

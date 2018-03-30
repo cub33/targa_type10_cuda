@@ -1,13 +1,13 @@
 
 typedef struct rle_pkt_struct {
   bool id;
-  /* Pixel */uint8_t value;
+  RGBPixel value;
   int repeats;
 } rle_pkt;
 
 typedef struct raw_pkt_struct {
   bool id;
-  /* Pixel* */ uint8_t* values;
+  RGBPixel* values;
   int repeats;
 } raw_pkt;
 

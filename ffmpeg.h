@@ -9,8 +9,8 @@ typedef struct frame {
   int width;
   int height;
   RGBPixel *pixels;
-} GeneralFrame;
+} VideoFrame;
 
-GeneralFrame* importFrame();
+VideoFrame* importFrame();
 
 void ffmpegMain(char const *videoPath);
