@@ -7,14 +7,14 @@ compile with command:
 gcc -w -o ffmpeg.o ffmpeg.c -lavformat -lavcodec -lswscale -lavutil
 */
 
-GeneralFrame *frameToExp; // frame to export
+VideoFrame *frameToExp; // frame to export
 
-GeneralFrame* importFrame(char const *videoPath) {
+VideoFrame* importFrame(char const *videoPath) {
   ffmpegMain(videoPath);
   return frameToExp;
 };
 
-void printFrame(GeneralFrame* frame) {
+void printFrame(VideoFrame* frame) {
   printf("width: %d, height: %d\n", frame->width, frame->height);
   int idx = 0;
   uint8_t r, g, b;
@@ -22,15 +22,14 @@ void printFrame(GeneralFrame* frame) {
     for (int y = 0; y < frame->height; y++) {
       idx = y + x * frame->height;
       r = frame->pixels[idx].r;
-      //g = frame->pixels[idx].g;
-      //b = frame->pixels[idx].b;
-      //printf("r: %d, g: %d, b: %d\n", r, g, b);
-      printf("%d, ", r);
+      g = frame->pixels[idx].g;
+      b = frame->pixels[idx].b;
+      printf("r: %d, g: %d, b: %d\n", r, g, b);
     }
 };
 
 void saveFrame(AVFrame *pFrame, int width, int height) {
-  frameToExp = (GeneralFrame *) malloc(sizeof(GeneralFrame));
+  frameToExp = (VideoFrame *) malloc(sizeof(VideoFrame));
   frameToExp->width = width;
   frameToExp->height = height;
   frameToExp->pixels = (RGBPixel *) malloc(sizeof(RGBPixel) * width * height);
@@ -88,12 +87,12 @@ void ffmpegMain(char const* videoPath) {
     printf("%s\n", "Could not find stream information.");
     exit(0);
   }
-
+  /*
   // printing info
   printf("%s\n", "   --------------  File info  --------------\n");
   av_dump_format(pFormatCtx, 0, videoPath, 0);
   printf("%s\n", "\n   --------------  End file info  --------------\n");
-
+  */
   // Find the first video stream
   int videoStream = -1;
   for (i = 0; i < pFormatCtx->nb_streams; i++)
@@ -173,10 +172,10 @@ void ffmpegMain(char const* videoPath) {
         pFrameRGB->data, pFrameRGB->linesize);
 
           // Save the frame to disk
-          if(once) {
+          //if(once) {
             once = 0;
             saveFrame(pFrameRGB, pCodecCtx->width, pCodecCtx->height);
-          }
+          //}
       }
     }
 
