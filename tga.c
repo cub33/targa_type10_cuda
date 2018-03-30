@@ -2,6 +2,7 @@
 #include <malloc.h>
 #include <stdbool.h>
 #include "tga.h"
+#include "RGBPixel.c"
 
 void printTGA(TGA tga) {
   for (int i = 0; i < tga.size; i++) {
@@ -22,45 +23,20 @@ void printTGA(TGA tga) {
 
 void insertRawPkt(TGA* tga, raw_pkt rawPkt) {
   tga->packets[tga->size].rawPkt.repeats = rawPkt.repeats;
-  tga->packets[tga->size].rawPkt.values = (int*) malloc(sizeof(int) * rawPkt.repeats);
+  tga->packets[tga->size].rawPkt.values = (RGBPixel *) malloc(sizeof(RGBPixel) * rawPkt.repeats);
   for (int i = 0; i < rawPkt.repeats; i++)
     copyPixels(&(tga->packets[tga->size].rawPkt.values[i]), &rawPkt.values[i]);
   tga->packets[tga->size++].id = 0;
 }
 
-/* TODO create RGBPixel.c and copy the following functions*/
-
-bool valuesAreEqual(RGBPixel value1, RGBPixel value2) {
-  bool areEqual = value1.r == value2.r &&
-    value1.g == value2.g &&
-    value1.b == value2.b;
-    return areEqual ? 1 : 0;
-}
-
-void printPixel(RGBPixel pixel) {
-  printf("| r: %d, g: %d, b: %d | ", pixel.r, pixel.g, pixel.b);
-}
-
-void assignRGBValues(RGBPixel* pixel, uint8_t r, uint8_t g, uint8_t b) {
-  pixel->r = r; pixel->g = g; pixel->b = b;
-}
-
-void copyPixels(RGBPixel* copyTo, RGBPixel* copyFrom) {
-  copyTo->r = copyFrom->r;
-  copyTo->g = copyFrom->g;
-  copyTo->b = copyFrom->b;
-}
-
-      /* ----------------------------------------- */
-
-void tgaMain(GeneralFrame* frame) {
+void createTGA(VideoFrame* frame) {
 
   rle_pkt rlePkt = { 1, -1, 0 };
   raw_pkt rawPkt;
   rawPkt.values = (uint8_t *) malloc(sizeof(int) * frame->width); /* FIXME */
   rawPkt.repeats = 0;
   TGA tga;
-  tga.packets = (Packet *) malloc(sizeof(Packet) * 50000000); /* TODO allocate memory in correct way */
+  tga.packets = (Packet *) malloc(sizeof(Packet) * frame->width * frame->height); /* TODO allocate memory in correct way */
   tga.size = 0;
   bool different = 1;
   int idx = 0;
@@ -111,5 +87,5 @@ void tgaMain(GeneralFrame* frame) {
       }
     }
   }
-  printTGA(tga);
+  //printTGA(tga);
 }
