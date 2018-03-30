@@ -17,7 +17,7 @@ GeneralFrame* importFrame(char const *videoPath) {
 void printFrame(GeneralFrame* frame) {
   printf("width: %d, height: %d\n", frame->width, frame->height);
   int idx = 0;
-  int r, g, b;
+  uint8_t r, g, b;
   for (int x = 0; x < frame->width; x++)
     for (int y = 0; y < frame->height; y++) {
       idx = y + x * frame->height;
@@ -198,8 +198,3 @@ void ffmpegMain(char const* videoPath) {
   avformat_close_input(&pFormatCtx);
 
 }
-
-/*int main(int argc, char const *argv[]) {
-  ffmpegMain(argc, argv);
-  return 0;
-}*/

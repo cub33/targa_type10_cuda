@@ -60,17 +60,14 @@ void tgaMain(GeneralFrame* frame) {
       //int g = img[x][y][1];
       //int b = img[x][y][2];
       idx = y + x * frame->height;
-      int value = frame->pixels[idx].r;
+      uint8_t value = frame->pixels[idx].r;
       rlePkt.value = value;
-      //bool endLine = img[x+1][y][0] == 0;
       bool endLine = x == frame->height-1;
-      int nextValue = -1;
-      int prevValue = -1;
+      uint8_t nextValue = -1;
+      uint8_t prevValue = -1;
       if (x != 0)
-        //prevValue = img[x-1][y][0];
         prevValue = frame->pixels[idx-1].r;
       if (!endLine)
-        //nextValue = img[x+1][y][0];
         nextValue = frame->pixels[idx+1].r;
       else
         different = 1;
