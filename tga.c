@@ -43,6 +43,23 @@ void insertRawPkt(TGA* tga, raw_pkt rawPkt) {
   tga->packets[tga->size++].id = 0;
 }
 
+bool valuesAreEqual(RGBPixel* value1, RGBPixel* value2) {
+  bool equal = value1->r == value2->r &&
+    value1->g == value2->g &&
+    value1->b == value2->b;
+    return equal ? 1 : 0;
+}
+
+void assignRGBValues(RGBPixel* pixel, uint8_t r, uint8_t g, uint8_t b) {
+  pixel->r = r; pixel->g = g; pixel->b = b;
+}
+
+void copyPixels(RGBPixel* copyTo, RGBPixel* copyFrom) {
+  copyTo->r = copyFrom->r;
+  copyTo->g = copyFrom->g;
+  copyTo->b = copyFrom->b;
+}
+
 void tgaMain(GeneralFrame* frame) {
 
   rle_pkt rlePkt = { 1, -1, 0 };
@@ -56,22 +73,27 @@ void tgaMain(GeneralFrame* frame) {
   int idx = 0;
   for (int x = 0; x < frame->width; x++) {
     for (int y = 0; y < frame->height; y++) {
-      //int r = img[x][y][0];
-      //int g = img[x][y][1];
-      //int b = img[x][y][2];
       idx = y + x * frame->height;
-      uint8_t value = frame->pixels[idx].r;
+      RGBPixel* value, nextValue, prevValue;
+      copyPixels(value, frame->pixels[idx])
+      /**value = assignRGBValues(
+        frame->pixels[idx].r,
+        frame->pixels[idx].g,
+        frame->pixels[idx].b
+      );*/
+      assignRGBValues(nextValue, -1, -1, -1);
+      assignRGBValues(prevValue, -1, -1, -1);
       rlePkt.value = value;
       bool endLine = x == frame->height-1;
-      uint8_t nextValue = -1;
-      uint8_t prevValue = -1;
       if (x != 0)
-        prevValue = frame->pixels[idx-1].r;
+        copyPixels(prevValue, *frame->pixels[idx-1]);
+        //prevValue = frame->pixels[idx-1].r;
       if (!endLine)
-        nextValue = frame->pixels[idx+1].r;
+        copyPixels(nextValue, *frame->pixels[idx+1]);
+        //nextValue = frame->pixels[idx+1].r;
       else
         different = 1;
-      if (value == nextValue) {
+      if (valuesAreEqual(value, nextValue)) {
         rlePkt.repeats++;
         different = 0;
         if (rawPkt.repeats > 0) {
@@ -80,7 +102,7 @@ void tgaMain(GeneralFrame* frame) {
         }
       }
       else {
-        if (different && prevValue != value)
+        if (different && !valuesAreEqual(prevValue, value) /*prevValue != value*/)
           rawPkt.values[rawPkt.repeats++] = value;
         if (rawPkt.repeats > 0 && endLine) {
           insertRawPkt(&tga, rawPkt);
