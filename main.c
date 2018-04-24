@@ -5,7 +5,8 @@
 #include "tga.c"
 
 int main(int argc, char const *argv[]) {
-  VideoFrame* frame = importFrame(argv[1]);
-  createTGA(frame);
+  VideoFrame* frame = extractFrame(argv[1]);
+  writeComprTGA(frame);
+  //createTGA(frame);
   return 0;
 }

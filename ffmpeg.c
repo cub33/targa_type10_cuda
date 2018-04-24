@@ -9,7 +9,7 @@ gcc -w -o ffmpeg.o ffmpeg.c -lavformat -lavcodec -lswscale -lavutil
 
 VideoFrame *frameToExp; // frame to export
 
-VideoFrame* importFrame(char const *videoPath) {
+VideoFrame* extractFrame(char const *videoPath) {
   ffmpegMain(videoPath);
   return frameToExp;
 };
@@ -34,6 +34,7 @@ void saveFrame(AVFrame *pFrame, int width, int height) {
   frameToExp->height = height;
   frameToExp->pixels = (RGBPixel *) malloc(sizeof(RGBPixel) * width * height);
   int p, idx = 0;
+#if 0
   RGBPixel *pixel = (RGBPixel *) malloc(sizeof(RGBPixel));
   for (int x = 0; x < width; x++)
     for (int y = 0; y < height; y++) {
@@ -44,6 +45,9 @@ void saveFrame(AVFrame *pFrame, int width, int height) {
       pixel->b = pFrame->data[0][p+2];
       frameToExp->pixels[idx] = *pixel;
     }
+#else
+  memcpy(frameToExp->pixels, pFrame->data[0], sizeof(RGBPixel) * width * height);
+#endif
 }
 
 void saveFrameToDisk(AVFrame *pFrame, int width, int height, int iFrame) {
@@ -172,10 +176,10 @@ void ffmpegMain(char const* videoPath) {
         pFrameRGB->data, pFrameRGB->linesize);
 
           // Save the frame to disk
-          //if(once) {
+          if(once) {
             once = 0;
             saveFrame(pFrameRGB, pCodecCtx->width, pCodecCtx->height);
-          //}
+          }
       }
     }
 

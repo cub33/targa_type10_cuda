@@ -11,6 +11,6 @@ typedef struct frame {
   RGBPixel *pixels;
 } VideoFrame;
 
-VideoFrame* importFrame();
+VideoFrame* extractFrame();
 
 void ffmpegMain(char const *videoPath);
