@@ -6,6 +6,7 @@
 
 RGBPixel nullPixel;
 TGA createTGA(VideoFrame* frame);
+int pixelCount = 0;
 
 void printTGA(TGA tga) {
   for (int i = 0; i < tga.size; i++) {
@@ -67,7 +68,7 @@ void writeComprTGA(VideoFrame* frame) {
       if (rlePkt.repeats > 128) {
         exit(2);
       }
-      pktHeader = rlePkt.repeats + 128;
+      pktHeader = (rlePkt.repeats + 128) - 1;
       putc(pktHeader, fptr);
       putc(rlePkt.value.b, fptr);
       putc(rlePkt.value.g, fptr);
@@ -107,21 +108,23 @@ void writeUncomprTGA(VideoFrame* frame) {
 }
 
 TGA createTGA(VideoFrame* frame) {
-  rle_pkt rlePkt = { 1, -1, 0 };
+  rle_pkt rlePkt;
   raw_pkt rawPkt;
   rawPkt.repeats = 0;
+  rlePkt.repeats = 0;
   TGA tga;
   tga.packets = (Packet *) malloc(sizeof(Packet) * frame->width * frame->height); /* TODO allocate memory in correct way */
   tga.size = 0;
   int idx = 0;
+  //int myHeight = 50;
+  //frame->height = myHeight;
   for (int y = 0; y < frame->height; y++) {
     for (int x = 0; x < frame->width; x++) {
-      idx = (x + y * frame->width-1) + 1; // it starts at -1 (?)
-      RGBPixel value, nextValue, prevValue;
+      idx = (x + y * frame->width);
+      RGBPixel value, nextValue;
       nullPixel.r = -1; nullPixel.g = -1; nullPixel.b = -1;
       copyPixels(&value, &frame->pixels[idx]);
       copyPixels(&nextValue, &nullPixel);
-      copyPixels(&prevValue, &nullPixel);
       rlePkt.value = value;
       bool endLine = x == frame->width-1;
       if (!endLine)
@@ -145,6 +148,7 @@ TGA createTGA(VideoFrame* frame) {
     }
   }
   printTGA(tga);
+  printf("\npixelCount = %d\n", pixelCount);
   return tga;
 }
 
@@ -152,6 +156,7 @@ void insertRlePkt(TGA* tga, rle_pkt* rlePkt) {
   Packet temp;
   copyPixels(&temp.rlePkt.value, &rlePkt->value);
   temp.rlePkt.repeats = rlePkt->repeats;
+  pixelCount += temp.rlePkt.repeats;
   tga->packets[tga->size] = temp;
   tga->packets[tga->size++].id = 1;
   /* reset rle packet */
@@ -164,7 +169,8 @@ void insertRawPkt(TGA* tga, raw_pkt rawPkt) {
     return;
   }
   tga->packets[tga->size].rawPkt.repeats = rawPkt.repeats;
-  tga->packets[tga->size].rawPkt.values = (RGBPixel *) malloc(sizeof(RGBPixel) * rawPkt.repeats);
+  pixelCount += rawPkt.repeats;
+  //tga->packets[tga->size].rawPkt.values = (RGBPixel *) malloc(sizeof(RGBPixel) * rawPkt.repeats);
   for (int i = 0; i < rawPkt.repeats; i++)
     copyPixels(&(tga->packets[tga->size].rawPkt.values[i]), &rawPkt.values[i]);
   tga->packets[tga->size++].id = 0;

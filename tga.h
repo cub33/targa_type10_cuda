@@ -1,14 +1,14 @@
 
 typedef struct rle_pkt_struct {
   bool id;
-  RGBPixel value;
   int repeats;
+  RGBPixel value; // to static array
 } rle_pkt;
 
 typedef struct raw_pkt_struct {
   bool id;
-  RGBPixel* values;
   int repeats;
+  RGBPixel values[128];
 } raw_pkt;
 
 typedef union {
