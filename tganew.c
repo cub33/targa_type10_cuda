@@ -55,7 +55,7 @@ void writeComprTGA(VideoFrame* frame) {
       if (rawPkt.repeats > 128) {
         exit(1);
       }
-      pktHeader = rawPkt.repeats;
+      pktHeader = rawPkt.repeats - 1;
       putc(pktHeader, fptr);
       for (int j = 0; j < rawPkt.repeats; j++) {
         putc(rawPkt.values[j].b, fptr);
@@ -68,7 +68,7 @@ void writeComprTGA(VideoFrame* frame) {
       if (rlePkt.repeats > 128) {
         exit(2);
       }
-      pktHeader = (rlePkt.repeats + 128) - 1;
+      pktHeader = (rlePkt.repeats - 1) | 128;
       putc(pktHeader, fptr);
       putc(rlePkt.value.b, fptr);
       putc(rlePkt.value.g, fptr);
@@ -116,8 +116,6 @@ TGA createTGA(VideoFrame* frame) {
   tga.packets = (Packet *) malloc(sizeof(Packet) * frame->width * frame->height); /* TODO allocate memory in correct way */
   tga.size = 0;
   int idx = 0;
-  //int myHeight = 50;
-  //frame->height = myHeight;
   for (int y = 0; y < frame->height; y++) {
     for (int x = 0; x < frame->width; x++) {
       idx = (x + y * frame->width);
@@ -130,9 +128,13 @@ TGA createTGA(VideoFrame* frame) {
       if (!endLine)
         copyPixels(&nextValue, &frame->pixels[idx+1]);
 
-      if (valuesAreEqual(value, nextValue))
+      if (valuesAreEqual(value, nextValue)){
         rlePkt.repeats++;
-
+        if (rlePkt.repeats == 128) {
+          insertRlePkt(&tga, &rlePkt);
+          continue;
+        }
+      }
       if (rlePkt.repeats > 0 && (!valuesAreEqual(value, nextValue) || endLine)) { /* add rle packet */
         rlePkt.repeats++;
         insertRlePkt(&tga, &rlePkt);
@@ -147,8 +149,6 @@ TGA createTGA(VideoFrame* frame) {
       }
     }
   }
-  printTGA(tga);
-  printf("\npixelCount = %d\n", pixelCount);
   return tga;
 }
 
@@ -170,7 +170,6 @@ void insertRawPkt(TGA* tga, raw_pkt rawPkt) {
   }
   tga->packets[tga->size].rawPkt.repeats = rawPkt.repeats;
   pixelCount += rawPkt.repeats;
-  //tga->packets[tga->size].rawPkt.values = (RGBPixel *) malloc(sizeof(RGBPixel) * rawPkt.repeats);
   for (int i = 0; i < rawPkt.repeats; i++)
     copyPixels(&(tga->packets[tga->size].rawPkt.values[i]), &rawPkt.values[i]);
   tga->packets[tga->size++].id = 0;
